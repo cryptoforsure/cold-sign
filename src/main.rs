@@ -83,6 +83,17 @@ enum Commands {
         #[arg(short, long)]
         output: Option<String>,
     },
+
+    /// Derive private key from mnemonic phrase and save to file
+    DeriveKey {
+        /// Path to file containing mnemonic phrase (optional, will prompt if not provided)
+        #[arg(short, long)]
+        mnemonic_file: Option<String>,
+
+        /// Output file path for private key
+        #[arg(short, long)]
+        output: String,
+    },
 }
 
 #[tokio::main]
@@ -117,6 +128,12 @@ async fn main() -> Result<()> {
             output,
         } => {
             commands::generate_mnemonic::execute(create_keystore, output).await?;
+        }
+        Commands::DeriveKey {
+            mnemonic_file,
+            output,
+        } => {
+            commands::derive_key::execute(mnemonic_file, output).await?;
         }
     }
 
