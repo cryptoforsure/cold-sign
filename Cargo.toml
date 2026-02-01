@@ -1,0 +1,16 @@
+[package]
+name = "cold-deploy"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ethan"]
+description = "Offline signer for deploying Solidity contracts"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+ethers = { version = "2.0", features = ["legacy"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.40", features = ["full"] }
+anyhow = "1.0"
+hex = "0.4"
+rpassword = "7.3"

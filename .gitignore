@@ -1,0 +1,25 @@
+# Rust build artifacts
+/target
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sensitive files
+*.keystore
+*.key
+*.pem
+*-keystore.json
+keystore/
+
+# Transaction files (optional - uncomment if you don't want to commit these)
+# *.unsigned.json
+# *.signed.json
+
+# OS
+.DS_Store
+Thumbs.db
