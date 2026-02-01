@@ -72,6 +72,17 @@ enum Commands {
         #[arg(short, long)]
         rpc_url: String,
     },
+
+    /// Generate a new 24-word BIP39 mnemonic phrase
+    GenerateMnemonic {
+        /// Optional: Save private key to file immediately (plain text)
+        #[arg(short, long)]
+        create_keystore: bool,
+
+        /// Output file path for private key (if --create-keystore is set)
+        #[arg(short, long)]
+        output: Option<String>,
+    },
 }
 
 #[tokio::main]
@@ -100,6 +111,12 @@ async fn main() -> Result<()> {
         }
         Commands::Broadcast { signed, rpc_url } => {
             commands::broadcast::execute(signed, rpc_url).await?;
+        }
+        Commands::GenerateMnemonic {
+            create_keystore,
+            output,
+        } => {
+            commands::generate_mnemonic::execute(create_keystore, output).await?;
         }
     }
 
