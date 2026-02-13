@@ -42,91 +42,15 @@ The binary will be available as `cold-deploy` in your PATH.
 
 ### Complete Workflow
 
-The typical workflow involves three steps performed on different machines for maximum security:
+The typical workflow involves five steps performed on different machines for maximum security:
 
-1. **Online machine**: Generate unsigned transaction (prepare)
-2. **Offline machine**: Sign transaction with keystore (sign)
-3. **Online machine**: Broadcast signed transaction (broadcast)
+1. **Offline machine**: Generate new mnemonic phrase (generate-mnemonic)
+2. **Offline machine**: Derive private key from mnemonic (derive-key)
+3. **Online machine**: Generate unsigned transaction (prepare)
+4. **Offline machine**: Sign transaction with keystore (sign)
+5. **Online machine**: Broadcast signed transaction (broadcast)
 
-### 1. Prepare Command
-
-Generate an unsigned transaction for contract deployment.
-
-```bash
-cold-deploy prepare \
-  --contract examples/SimpleStorage.json \
-  --rpc-url https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY \
-  --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
-  --chain-id 11155111 \
-  --output unsigned.json
-```
-
-**With Constructor Arguments:**
-
-```bash
-cold-deploy prepare \
-  --contract MyToken.json \
-  --rpc-url https://mainnet.infura.io/v3/YOUR_API_KEY \
-  --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
-  --chain-id 1 \
-  --args "1000000,MyToken,MTK" \
-  --gas-limit 2000000 \
-  --output unsigned.json
-```
-
-**Parameters:**
-- `--contract`: Path to compiled Solidity contract JSON (must have `bytecode` and `abi` fields)
-- `--rpc-url`: Ethereum RPC endpoint URL
-- `--from`: Address that will deploy the contract
-- `--chain-id`: Network chain ID (1 = Ethereum mainnet, 11155111 = Sepolia, etc.)
-- `--args`: Comma-separated constructor arguments (optional)
-- `--gas-limit`: Manual gas limit (optional, defaults to 3,000,000)
-- `--output`: Output file path (default: unsigned.json)
-
-**Output:** Creates `unsigned.json` containing the unsigned transaction details.
-
-### 2. Sign Command
-
-Sign the transaction offline using an encrypted keystore. **This should be done on an air-gapped machine.**
-
-```bash
-cold-deploy sign \
-  --unsigned unsigned.json \
-  --keystore /path/to/keystore.json \
-  --output signed.json
-```
-
-You will be prompted to enter your keystore password securely (input is hidden).
-
-**Parameters:**
-- `--unsigned`: Path to unsigned transaction JSON
-- `--keystore`: Path to encrypted keystore file
-- `--output`: Output file path (default: signed.json)
-
-**Output:** Creates `signed.json` containing the signed transaction and transaction hash.
-
-### 3. Broadcast Command
-
-Broadcast the signed transaction to the network.
-
-```bash
-cold-deploy broadcast \
-  --signed signed.json \
-  --rpc-url https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
-```
-
-**Parameters:**
-- `--signed`: Path to signed transaction JSON
-- `--rpc-url`: Ethereum RPC endpoint URL
-
-**Output:**
-- Transaction hash
-- Confirmation status
-- Contract address (for deployments)
-- Gas used
-- Block number
-
-### 4. Generate-Mnemonic Command
+### 1. Generate-Mnemonic Command
 
 Generate a new 24-word BIP39 mnemonic phrase for creating wallets.
 
@@ -140,7 +64,7 @@ cold-deploy generate-mnemonic --create-keystore --output private-key.txt
 
 **Parameters:**
 - `--create-keystore` / `-c`: Optional flag to save the derived private key to file
-- `--output` / `-o`: Output file path for private key (default: `private-key-<ADDRESS>.txt`)
+- `--output` / `-o`: Output file path for private key (default: `private-key-<ADDRESS>.txt` where `<ADDRESS>` is the derived Ethereum address, e.g., `private-key-0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb.txt`)
 
 **Output:**
 - Displays 24-word mnemonic in numbered format
@@ -174,7 +98,7 @@ Derived address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
 Private key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 ```
 
-### 5. Derive-Key Command
+### 2. Derive-Key Command
 
 Derive a private key from an existing 24-word mnemonic phrase.
 
@@ -223,6 +147,84 @@ Deriving key using path: m/44'/60'/0'/0/0
   Address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
   Private key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 ```
+
+### 3. Prepare Command
+
+Generate an unsigned transaction for contract deployment.
+
+```bash
+cold-deploy prepare \
+  --contract examples/SimpleStorage.json \
+  --rpc-url https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY \
+  --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
+  --chain-id 11155111 \
+  --output unsigned.json
+```
+
+**With Constructor Arguments:**
+
+```bash
+cold-deploy prepare \
+  --contract MyToken.json \
+  --rpc-url https://mainnet.infura.io/v3/YOUR_API_KEY \
+  --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
+  --chain-id 1 \
+  --args "1000000,MyToken,MTK" \
+  --gas-limit 2000000 \
+  --output unsigned.json
+```
+
+**Parameters:**
+- `--contract`: Path to compiled Solidity contract JSON (must have `bytecode` and `abi` fields)
+- `--rpc-url`: Ethereum RPC endpoint URL
+- `--from`: Address that will deploy the contract
+- `--chain-id`: Network chain ID (1 = Ethereum mainnet, 11155111 = Sepolia, etc.)
+- `--args`: Comma-separated constructor arguments (optional)
+- `--gas-limit`: Manual gas limit (optional, defaults to 3,000,000)
+- `--output`: Output file path (default: unsigned.json)
+
+**Output:** Creates `unsigned.json` containing the unsigned transaction details.
+
+### 4. Sign Command
+
+Sign the transaction offline using an encrypted keystore. **This should be done on an air-gapped machine.**
+
+```bash
+cold-deploy sign \
+  --unsigned unsigned.json \
+  --keystore /path/to/keystore.json \
+  --output signed.json
+```
+
+You will be prompted to enter your keystore password securely (input is hidden).
+
+**Parameters:**
+- `--unsigned`: Path to unsigned transaction JSON
+- `--keystore`: Path to encrypted keystore file
+- `--output`: Output file path (default: signed.json)
+
+**Output:** Creates `signed.json` containing the signed transaction and transaction hash.
+
+### 5. Broadcast Command
+
+Broadcast the signed transaction to the network.
+
+```bash
+cold-deploy broadcast \
+  --signed signed.json \
+  --rpc-url https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
+```
+
+**Parameters:**
+- `--signed`: Path to signed transaction JSON
+- `--rpc-url`: Ethereum RPC endpoint URL
+
+**Output:**
+- Transaction hash
+- Confirmation status
+- Contract address (for deployments)
+- Gas used
+- Block number
 
 ### Example Contract JSON
 
