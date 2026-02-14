@@ -116,6 +116,7 @@ pub async fn execute(
         max_priority_fee_per_gas,
         chain_id,
         value: "0".to_string(),
+        rpc_url: rpc_url.clone(),
     };
 
     // Save to output file

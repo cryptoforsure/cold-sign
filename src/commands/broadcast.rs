@@ -7,7 +7,7 @@ use std::fs;
 
 use crate::types::sign_output::SignedTransaction;
 
-pub async fn execute(signed_path: String, rpc_url: String) -> Result<()> {
+pub async fn execute(signed_path: String) -> Result<()> {
     println!("Broadcasting transaction...");
     println!("Loading signed transaction from: {}", signed_path);
 
@@ -23,9 +23,10 @@ pub async fn execute(signed_path: String, rpc_url: String) -> Result<()> {
     println!("From: {}", signed_tx.from);
     println!("Nonce: {}", signed_tx.nonce);
 
-    // Connect to RPC provider
+    // Use RPC URL from signed transaction
+    let rpc_url = &signed_tx.rpc_url;
     println!("\nConnecting to RPC: {}", rpc_url);
-    let provider = Provider::<Http>::try_from(&rpc_url)
+    let provider = Provider::<Http>::try_from(rpc_url)
         .context("Failed to create provider")?;
 
     // Verify chain ID matches

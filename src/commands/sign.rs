@@ -108,6 +108,7 @@ pub async fn execute(unsigned_path: String, keystore_path: String, output: Strin
         to: unsigned_tx.to.clone(),
         nonce: unsigned_tx.nonce,
         chain_id: unsigned_tx.chain_id,
+        rpc_url: unsigned_tx.rpc_url.clone(),
     };
 
     // Save to output file

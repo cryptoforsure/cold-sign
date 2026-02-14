@@ -46,9 +46,14 @@ The typical workflow involves five steps performed on different machines for max
 
 1. **Offline machine**: Generate new mnemonic phrase (generate-mnemonic)
 2. **Offline machine**: Derive private key from mnemonic (derive-key)
-3. **Online machine**: Generate unsigned transaction (prepare)
-4. **Offline machine**: Sign transaction with keystore (sign)
-5. **Online machine**: Broadcast signed transaction (broadcast)
+3. **Online machine**: Generate unsigned transaction with network configuration (prepare)
+4. **Offline machine**: Sign transaction with keystore (sign) - preserves network config
+5. **Online machine**: Broadcast signed transaction (broadcast) - uses stored network config
+
+**Key Feature**: Network configuration (RPC URL, chain ID) flows through the entire workflow:
+- `prepare` → saves to `unsigned.json`
+- `sign` → copies to `signed.json`
+- `broadcast` → reads from `signed.json` (no need to specify again!)
 
 ### 1. Generate-Mnemonic Command
 
@@ -152,10 +157,23 @@ Deriving key using path: m/44'/60'/0'/0/0
 
 Generate an unsigned transaction for contract deployment. The chain ID is automatically detected from the RPC endpoint.
 
+**Using Infura (recommended for public networks):**
+
 ```bash
 cold-deploy prepare \
   --contract examples/SimpleStorage.json \
-  --rpc-url https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY \
+  --network sepolia \
+  --infura-key YOUR_INFURA_API_KEY \
+  --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
+  --output unsigned.json
+```
+
+**Using custom RPC URL (for local chains or other providers):**
+
+```bash
+cold-deploy prepare \
+  --contract examples/SimpleStorage.json \
+  --rpc-url http://localhost:8545 \
   --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
   --output unsigned.json
 ```
@@ -165,7 +183,8 @@ cold-deploy prepare \
 ```bash
 cold-deploy prepare \
   --contract MyToken.json \
-  --rpc-url https://mainnet.infura.io/v3/YOUR_API_KEY \
+  --network mainnet \
+  --infura-key YOUR_INFURA_API_KEY \
   --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
   --args "1000000,MyToken,MTK" \
   --gas-limit 2000000 \
@@ -173,12 +192,23 @@ cold-deploy prepare \
 ```
 
 **Parameters:**
-- `--contract`: Path to compiled Solidity contract JSON (must have `bytecode` and `abi` fields)
-- `--rpc-url`: Ethereum RPC endpoint URL (chain ID is automatically detected from this endpoint)
-- `--from`: Address that will deploy the contract
+- `--contract` / `-c`: Path to compiled Solidity contract JSON (must have `bytecode` and `abi` fields)
+- **Network configuration (choose one):**
+  - `--network` / `-n` + `--infura-key` / `-i`: Network name and Infura API key (recommended for public networks)
+  - `--rpc-url` / `-r`: Custom RPC endpoint URL (for local chains or other providers)
+- `--from` / `-f`: Address that will deploy the contract
 - `--args`: Comma-separated constructor arguments (optional)
 - `--gas-limit`: Manual gas limit (optional, defaults to 3,000,000)
-- `--output`: Output file path (default: unsigned.json)
+- `--output` / `-o`: Output file path (default: unsigned.json)
+
+**Supported Networks (for --network):**
+- **Ethereum:** `mainnet`, `sepolia`, `goerli`, `holesky`
+- **Polygon:** `polygon`, `polygon-amoy`
+- **Arbitrum:** `arbitrum`, `arbitrum-sepolia`
+- **Optimism:** `optimism`, `optimism-sepolia`
+- **Base:** `base`, `base-sepolia`
+- **Avalanche:** `avalanche`, `avalanche-fuji`
+- **Linea:** `linea`, `linea-sepolia`
 
 **Chain ID Detection:**
 The tool automatically fetches the chain ID from the RPC endpoint using the `eth_chainId` method. This ensures:
@@ -186,7 +216,10 @@ The tool automatically fetches the chain ID from the RPC endpoint using the `eth
 - Simplified command-line usage
 - Automatic replay protection (EIP-155)
 
-**Output:** Creates `unsigned.json` containing the unsigned transaction details including the auto-detected chain ID.
+**Output:** Creates `unsigned.json` containing:
+- Unsigned transaction details
+- Auto-detected chain ID
+- RPC URL (preserved through sign → broadcast workflow)
 
 ### 4. Sign Command
 
@@ -202,25 +235,28 @@ cold-deploy sign \
 You will be prompted to enter your keystore password securely (input is hidden).
 
 **Parameters:**
-- `--unsigned`: Path to unsigned transaction JSON
-- `--keystore`: Path to encrypted keystore file
-- `--output`: Output file path (default: signed.json)
+- `--unsigned` / `-u`: Path to unsigned transaction JSON
+- `--keystore` / `-k`: Path to encrypted keystore file
+- `--output` / `-o`: Output file path (default: signed.json)
 
-**Output:** Creates `signed.json` containing the signed transaction and transaction hash.
+**Output:** Creates `signed.json` containing:
+- Signed transaction and transaction hash
+- All parameters from `unsigned.json` (including RPC URL and chain ID)
+- Signer address and nonce
 
 ### 5. Broadcast Command
 
-Broadcast the signed transaction to the network.
+Broadcast the signed transaction to the network. The RPC URL and chain ID are automatically read from `signed.json`.
 
 ```bash
-cold-deploy broadcast \
-  --signed signed.json \
-  --rpc-url https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
+cold-deploy broadcast --signed signed.json
 ```
 
 **Parameters:**
-- `--signed`: Path to signed transaction JSON
-- `--rpc-url`: Ethereum RPC endpoint URL
+- `--signed` / `-s`: Path to signed transaction JSON
+
+**Automatic Network Configuration:**
+The broadcast command uses the RPC URL that was specified during the `prepare` step and stored in the transaction files. It also automatically verifies that the chain ID in the signed transaction matches the chain ID of the RPC endpoint to prevent broadcasting to the wrong network.
 
 **Output:**
 - Transaction hash

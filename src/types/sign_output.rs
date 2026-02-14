@@ -8,4 +8,5 @@ pub struct SignedTransaction {
     pub to: Option<String>,
     pub nonce: u64,
     pub chain_id: u64,
+    pub rpc_url: String,
 }

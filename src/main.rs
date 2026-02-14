@@ -22,9 +22,17 @@ enum Commands {
         #[arg(short, long)]
         contract: String,
 
-        /// RPC endpoint URL to fetch nonce and gas price
-        #[arg(short, long)]
-        rpc_url: String,
+        /// RPC endpoint URL (use this OR --network with --infura-key)
+        #[arg(short, long, conflicts_with_all = ["network", "infura_key"])]
+        rpc_url: Option<String>,
+
+        /// Network name for Infura (mainnet, sepolia, polygon, arbitrum, optimism, base, avalanche)
+        #[arg(short, long, requires = "infura_key")]
+        network: Option<String>,
+
+        /// Infura API key (required when using --network)
+        #[arg(short, long, requires = "network")]
+        infura_key: Option<String>,
 
         /// Deployer address
         #[arg(short, long)]
@@ -58,15 +66,11 @@ enum Commands {
         output: String,
     },
 
-    /// Broadcast signed transaction to the network
+    /// Broadcast signed transaction to the network (uses RPC URL from signed.json)
     Broadcast {
         /// Path to signed transaction JSON
         #[arg(short, long)]
         signed: String,
-
-        /// RPC endpoint URL
-        #[arg(short, long)]
-        rpc_url: String,
     },
 
     /// Generate a new 24-word BIP39 mnemonic phrase
@@ -100,12 +104,15 @@ async fn main() -> Result<()> {
         Commands::Prepare {
             contract,
             rpc_url,
+            network,
+            infura_key,
             from,
             args,
             output,
             gas_limit,
         } => {
-            commands::prepare::execute(contract, rpc_url, from, args, output, gas_limit)
+            let resolved_rpc_url = utils::rpc::resolve_rpc_url(rpc_url, network, infura_key)?;
+            commands::prepare::execute(contract, resolved_rpc_url, from, args, output, gas_limit)
                 .await?;
         }
         Commands::Sign {
@@ -115,8 +122,8 @@ async fn main() -> Result<()> {
         } => {
             commands::sign::execute(unsigned, keystore, output).await?;
         }
-        Commands::Broadcast { signed, rpc_url } => {
-            commands::broadcast::execute(signed, rpc_url).await?;
+        Commands::Broadcast { signed } => {
+            commands::broadcast::execute(signed).await?;
         }
         Commands::GenerateMnemonic {
             create_keystore,

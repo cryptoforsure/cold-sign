@@ -11,4 +11,5 @@ pub struct UnsignedTransaction {
     pub max_priority_fee_per_gas: Option<u64>,
     pub chain_id: u64,
     pub value: String,
+    pub rpc_url: String,
 }
