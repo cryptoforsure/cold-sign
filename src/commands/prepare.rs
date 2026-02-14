@@ -16,13 +16,11 @@ pub async fn execute(
     from: String,
     args: Option<String>,
     output: String,
-    chain_id: u64,
     gas_limit: Option<u64>,
 ) -> Result<()> {
     println!("Preparing unsigned transaction...");
     println!("Contract: {}", contract_path);
     println!("From: {}", from);
-    println!("Chain ID: {}", chain_id);
 
     // Parse contract JSON to extract bytecode and ABI
     let (bytecode, abi_value) = contract::parse_contract_json(&contract_path)
@@ -63,6 +61,14 @@ pub async fn execute(
     // Parse from address
     let from_addr = H160::from_str(&from)
         .context("Invalid from address")?;
+
+    // Fetch chain ID from RPC
+    println!("Fetching chain ID from RPC...");
+    let chain_id = provider.get_chainid()
+        .await
+        .context("Failed to fetch chain ID from RPC")?
+        .as_u64();
+    println!("Chain ID: {}", chain_id);
 
     // Fetch nonce
     println!("Fetching nonce for address: {}", from);

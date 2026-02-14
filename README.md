@@ -150,14 +150,13 @@ Deriving key using path: m/44'/60'/0'/0/0
 
 ### 3. Prepare Command
 
-Generate an unsigned transaction for contract deployment.
+Generate an unsigned transaction for contract deployment. The chain ID is automatically detected from the RPC endpoint.
 
 ```bash
 cold-deploy prepare \
   --contract examples/SimpleStorage.json \
   --rpc-url https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY \
   --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
-  --chain-id 11155111 \
   --output unsigned.json
 ```
 
@@ -168,7 +167,6 @@ cold-deploy prepare \
   --contract MyToken.json \
   --rpc-url https://mainnet.infura.io/v3/YOUR_API_KEY \
   --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
-  --chain-id 1 \
   --args "1000000,MyToken,MTK" \
   --gas-limit 2000000 \
   --output unsigned.json
@@ -176,14 +174,19 @@ cold-deploy prepare \
 
 **Parameters:**
 - `--contract`: Path to compiled Solidity contract JSON (must have `bytecode` and `abi` fields)
-- `--rpc-url`: Ethereum RPC endpoint URL
+- `--rpc-url`: Ethereum RPC endpoint URL (chain ID is automatically detected from this endpoint)
 - `--from`: Address that will deploy the contract
-- `--chain-id`: Network chain ID (1 = Ethereum mainnet, 11155111 = Sepolia, etc.)
 - `--args`: Comma-separated constructor arguments (optional)
 - `--gas-limit`: Manual gas limit (optional, defaults to 3,000,000)
 - `--output`: Output file path (default: unsigned.json)
 
-**Output:** Creates `unsigned.json` containing the unsigned transaction details.
+**Chain ID Detection:**
+The tool automatically fetches the chain ID from the RPC endpoint using the `eth_chainId` method. This ensures:
+- No chain ID mismatches between RPC and transaction
+- Simplified command-line usage
+- Automatic replay protection (EIP-155)
+
+**Output:** Creates `unsigned.json` containing the unsigned transaction details including the auto-detected chain ID.
 
 ### 4. Sign Command
 
@@ -284,7 +287,7 @@ Before broadcasting:
 - Verify the transaction hash in `signed.json`
 - Check the `from` address matches your keystore
 - Verify `nonce` is correct for your address
-- Review gas settings and chain ID
+- Review gas settings and chain ID (auto-detected during prepare, verified during broadcast)
 
 ## Supported Networks
 
@@ -298,7 +301,7 @@ Works with any EVM-compatible network:
 - Avalanche C-Chain
 - And more...
 
-Just specify the correct `--chain-id` and `--rpc-url`.
+Just specify the correct `--rpc-url` and the chain ID will be automatically detected from the network.
 
 ## Troubleshooting
 

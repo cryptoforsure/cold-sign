@@ -38,10 +38,6 @@ enum Commands {
         #[arg(short, long, default_value = "unsigned.json")]
         output: String,
 
-        /// Chain ID (e.g., 1 for Ethereum mainnet, 11155111 for Sepolia)
-        #[arg(long)]
-        chain_id: u64,
-
         /// Gas limit (optional, will estimate if not provided)
         #[arg(long)]
         gas_limit: Option<u64>,
@@ -107,10 +103,9 @@ async fn main() -> Result<()> {
             from,
             args,
             output,
-            chain_id,
             gas_limit,
         } => {
-            commands::prepare::execute(contract, rpc_url, from, args, output, chain_id, gas_limit)
+            commands::prepare::execute(contract, rpc_url, from, args, output, gas_limit)
                 .await?;
         }
         Commands::Sign {

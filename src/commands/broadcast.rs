@@ -28,6 +28,22 @@ pub async fn execute(signed_path: String, rpc_url: String) -> Result<()> {
     let provider = Provider::<Http>::try_from(&rpc_url)
         .context("Failed to create provider")?;
 
+    // Verify chain ID matches
+    println!("Verifying chain ID...");
+    let rpc_chain_id = provider.get_chainid()
+        .await
+        .context("Failed to fetch chain ID from RPC")?
+        .as_u64();
+
+    if rpc_chain_id != signed_tx.chain_id {
+        anyhow::bail!(
+            "Chain ID mismatch! Transaction signed for chain {} but RPC is on chain {}",
+            signed_tx.chain_id,
+            rpc_chain_id
+        );
+    }
+    println!("Chain ID verified: {}", rpc_chain_id);
+
     // Decode raw transaction
     let raw_tx = signed_tx.raw_transaction.strip_prefix("0x")
         .unwrap_or(&signed_tx.raw_transaction);
