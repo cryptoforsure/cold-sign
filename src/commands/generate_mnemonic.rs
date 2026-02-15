@@ -3,6 +3,8 @@ use ethers::{
     signers::{coins_bip39::{English, Mnemonic}, MnemonicBuilder, Signer},
 };
 
+use crate::constants::DEFAULT_ETH_DERIVATION_PATH;
+
 pub async fn execute() -> Result<()> {
     println!("Generating new 24-word BIP39 mnemonic...\n");
 
@@ -34,10 +36,10 @@ pub async fn execute() -> Result<()> {
     // Derive wallet to show the address
     let wallet = MnemonicBuilder::<English>::default()
         .phrase(phrase.trim())
-        .derivation_path("m/44'/60'/0'/0/0")?
+        .derivation_path(DEFAULT_ETH_DERIVATION_PATH)?
         .build()?;
 
-    println!("Derived address (m/44'/60'/0'/0/0): {:?}\n", wallet.address());
+    println!("Derived address ({}): {:?}\n", DEFAULT_ETH_DERIVATION_PATH, wallet.address());
 
     println!("═══════════════════════════════════════════════════════");
     println!("⚠️  Write down ALL 24 words in order!");

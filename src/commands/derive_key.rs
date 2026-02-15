@@ -6,6 +6,8 @@ use std::fs;
 use std::io::{self, Write as _};
 use std::path::Path;
 
+use crate::constants::DEFAULT_ETH_DERIVATION_PATH;
+
 pub async fn execute(mnemonic_file: Option<String>, output: Option<String>, plain_text: bool) -> Result<()> {
     if plain_text {
         println!("⚠️  WARNING: Creating PLAIN TEXT private key file!");
@@ -48,11 +50,11 @@ pub async fn execute(mnemonic_file: Option<String>, output: Option<String>, plai
     println!("Mnemonic validated: {} words", word_count);
 
     // Derive wallet from mnemonic using default Ethereum path (m/44'/60'/0'/0/0)
-    println!("Deriving key using path: m/44'/60'/0'/0/0");
+    println!("Deriving key using path: {}", DEFAULT_ETH_DERIVATION_PATH);
 
     let wallet = MnemonicBuilder::<English>::default()
         .phrase(mnemonic_phrase.as_str())
-        .derivation_path("m/44'/60'/0'/0/0")?
+        .derivation_path(DEFAULT_ETH_DERIVATION_PATH)?
         .build()
         .context("Failed to derive wallet from mnemonic. Check that the mnemonic is valid.")?;
 
