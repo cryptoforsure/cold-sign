@@ -73,16 +73,8 @@ enum Commands {
         signed: String,
     },
 
-    /// Generate a new 24-word BIP39 mnemonic phrase
-    GenerateMnemonic {
-        /// Optional: Save private key to file immediately (plain text)
-        #[arg(short, long)]
-        create_keystore: bool,
-
-        /// Output file path for private key (if --create-keystore is set)
-        #[arg(short, long)]
-        output: Option<String>,
-    },
+    /// Generate a new 24-word BIP39 mnemonic phrase (display only, nothing saved to disk)
+    GenerateMnemonic,
 
     /// Derive private key from mnemonic phrase and save to file
     DeriveKey {
@@ -125,11 +117,8 @@ async fn main() -> Result<()> {
         Commands::Broadcast { signed } => {
             commands::broadcast::execute(signed).await?;
         }
-        Commands::GenerateMnemonic {
-            create_keystore,
-            output,
-        } => {
-            commands::generate_mnemonic::execute(create_keystore, output).await?;
+        Commands::GenerateMnemonic => {
+            commands::generate_mnemonic::execute().await?;
         }
         Commands::DeriveKey {
             mnemonic_file,

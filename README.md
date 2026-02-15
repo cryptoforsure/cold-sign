@@ -57,40 +57,37 @@ The typical workflow involves five steps performed on different machines for max
 
 ### 1. Generate-Mnemonic Command
 
-Generate a new 24-word BIP39 mnemonic phrase for creating wallets.
+Generate a new 24-word BIP39 mnemonic phrase for creating wallets. **This command only displays the mnemonic on screen and never saves anything to disk.**
 
 ```bash
-# Generate mnemonic only (display on screen)
 cold-deploy generate-mnemonic
-
-# Generate mnemonic and save private key to file
-cold-deploy generate-mnemonic --create-keystore --output private-key.txt
 ```
 
 **Parameters:**
-- `--create-keystore` / `-c`: Optional flag to save the derived private key to file
-- `--output` / `-o`: Output file path for private key (default: `private-key-<ADDRESS>.txt` where `<ADDRESS>` is the derived Ethereum address, e.g., `private-key-0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb.txt`)
+- None - command takes no parameters
 
 **Output:**
 - Displays 24-word mnemonic in numbered format
-- With `--create-keystore`: saves private key in plain text hex format
-- Shows derived address
-- Displays security warnings
+- Shows derived Ethereum address (m/44'/60'/0'/0/0 path)
+- Displays prominent security warnings
+- **Nothing is saved to disk** - you must write down the words
 
-**⚠️ Security Notes:**
-- **SAVE YOUR MNEMONIC WORDS IMMEDIATELY** - they cannot be recovered
-- Private keys are saved in **PLAIN TEXT** - keep files extremely secure
-- Never share your mnemonic or private key files
-- Back up mnemonic in multiple secure locations
+**⚠️ Critical Security Notes:**
+- **WRITE DOWN ALL 24 WORDS IMMEDIATELY** - they cannot be recovered if lost
+- Write the words on paper (never store digitally)
+- Store in multiple secure locations (safe, safety deposit box, etc.)
+- Test recovery with `derive-key` command before funding the wallet
+- Anyone with these words can access ALL funds from derived accounts
 
 **Example Output:**
 ```
 Generating new 24-word BIP39 mnemonic...
 
 ═══════════════════════════════════════════════════════
-⚠️  IMPORTANT: Save these words in a secure location!
+⚠️  CRITICAL: Save these words IMMEDIATELY!
+⚠️  These words CANNOT be recovered if lost!
 ⚠️  Anyone with these words can access your funds!
-⚠️  Keep them offline and never share them!
+⚠️  Write them down on paper and store securely!
 ═══════════════════════════════════════════════════════
 
 Your 24-word mnemonic phrase:
@@ -98,9 +95,21 @@ Your 24-word mnemonic phrase:
  1. abandon      2. ability      3. able
  4. about        5. above        6. absent
 ...
+24. word
 
-Derived address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
-Private key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+Derived address (m/44'/60'/0'/0/0): 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+
+═══════════════════════════════════════════════════════
+⚠️  Write down ALL 24 words in order!
+⚠️  Test recovery with derive-key before funding!
+⚠️  Store backup in multiple secure locations!
+═══════════════════════════════════════════════════════
+
+Next steps:
+  1. Write down the 24 words above on paper
+  2. Store the paper securely (safe, safety deposit box, etc.)
+  3. To create a private key file or keystore, use:
+     cold-deploy derive-key --output private-key.txt
 ```
 
 ### 2. Derive-Key Command
