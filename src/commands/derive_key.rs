@@ -142,16 +142,22 @@ async fn save_encrypted_keystore(
     // Encrypt and save keystore
     println!("\nEncrypting keystore...");
     let mut rng = rand::thread_rng();
-    let keystore_json = eth_keystore::encrypt_key(
-        &file_path,
+
+    // Extract directory and filename from the file path
+    let path = Path::new(&file_path);
+    let dir = path.parent().unwrap_or(Path::new("."));
+    let filename = path.file_name()
+        .and_then(|n| n.to_str())
+        .context("Invalid filename")?;
+
+    // encrypt_key() writes the file to disk automatically
+    eth_keystore::encrypt_key(
+        dir,
         &mut rng,
         wallet.signer().to_bytes(),
         &password,
-        None,
+        Some(filename),
     ).context("Failed to encrypt keystore")?;
-
-    fs::write(&file_path, keystore_json)
-        .context("Failed to write keystore file")?;
 
     println!("\n✓ Encrypted keystore saved successfully!");
     println!("  File: {}", file_path);
