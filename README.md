@@ -108,43 +108,54 @@ Derived address (m/44'/60'/0'/0/0): 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
 Next steps:
   1. Write down the 24 words above on paper
   2. Store the paper securely (safe, safety deposit box, etc.)
-  3. To create a private key file or keystore, use:
-     cold-deploy derive-key --output private-key.txt
+  3. To create an encrypted keystore, use:
+     cold-deploy derive-key
 ```
 
 ### 2. Derive-Key Command
 
-Derive a private key from an existing 24-word mnemonic phrase.
+Derive an encrypted keystore from your 24-word mnemonic phrase. **Creates an encrypted JSON keystore by default** (recommended).
 
 ```bash
-# Derive from interactive input
-cold-deploy derive-key --output private-key.txt
+# Create encrypted keystore (recommended, default behavior)
+cold-deploy derive-key
 
-# Derive from mnemonic file
-cold-deploy derive-key --mnemonic-file mnemonic.txt --output private-key.txt
+# Create encrypted keystore with custom filename
+cold-deploy derive-key --output my-keystore.json
+
+# Read mnemonic from file
+cold-deploy derive-key --mnemonic-file mnemonic.txt
+
+# Plain text private key (NOT RECOMMENDED - requires explicit flag)
+cold-deploy derive-key --plain-text --output private-key.txt
 ```
 
 **Parameters:**
-- `--mnemonic-file` / `-m`: Optional path to file containing mnemonic phrase
-- `--output` / `-o`: Output file path for private key (required)
+- `--mnemonic-file` / `-m`: Optional path to file containing mnemonic phrase (will prompt if not provided)
+- `--output` / `-o`: Optional output file path (default: `keystore-<ADDRESS>.json` for encrypted, `private-key-<ADDRESS>.txt` for plain text)
+- `--plain-text`: Save as plain text private key instead of encrypted keystore (NOT RECOMMENDED)
 
 **Derivation Path:** Uses standard Ethereum path `m/44'/60'/0'/0/0`
 
-**Output:**
-- Validates mnemonic has 24 words
-- Derives private key using BIP44 path
-- Saves private key in plain text hex format
-- Displays address and private key
+**Encrypted Keystore Mode (Default):**
+- Prompts for password (hidden input)
+- Password confirmation required
+- Minimum 8 characters
+- Creates standard Ethereum encrypted JSON keystore
+- Compatible with all Ethereum tools (geth, MetaMask, etc.)
 
 **⚠️ Security Notes:**
-- Private keys are saved in **PLAIN TEXT**
+- **RECOMMENDED**: Use encrypted keystore (default) instead of plain text
+- Choose a strong password for keystore encryption
+- **Password cannot be recovered** - keep it safe!
 - Store mnemonic files securely or delete after use
-- Never commit mnemonic or private key files to version control
+- Never commit keystores, mnemonics, or private keys to version control
 
-**Example Usage:**
+**Example Usage (Encrypted Keystore):**
 ```bash
-# Interactive input
-$ cold-deploy derive-key --output my-key.txt
+$ cold-deploy derive-key
+Deriving encrypted keystore from mnemonic...
+
 Enter your 24-word mnemonic phrase:
 (paste all words separated by spaces, then press Enter)
 
@@ -156,10 +167,32 @@ Deriving key using path: m/44'/60'/0'/0/0
 ✓ Key derived successfully!
   Address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
 
-✓ Private key saved successfully!
-  File: my-key.txt
+Create a strong password to encrypt your keystore:
+(Password must be at least 8 characters)
+Enter password: ********
+Confirm password: ********
+
+Encrypting keystore...
+
+✓ Encrypted keystore saved successfully!
+  File: keystore-0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb.json
   Address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
-  Private key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+
+✓ Your private key is now protected with encryption!
+  Remember your password - it CANNOT be recovered if lost!
+```
+
+**Example Usage (Plain Text - Not Recommended):**
+```bash
+$ cold-deploy derive-key --plain-text --output my-key.txt
+⚠️  WARNING: Creating PLAIN TEXT private key file!
+⚠️  Consider using encrypted keystore instead (default)
+
+[... mnemonic entry ...]
+
+⚠️  WARNING: Private key saved in PLAIN TEXT!
+⚠️  Keep this file EXTREMELY secure!
+⚠️  Anyone with this file can access your funds!
 ```
 
 ### 3. Prepare Command
