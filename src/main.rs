@@ -16,6 +16,24 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Generate a new 24-word BIP39 mnemonic phrase (display only, nothing saved to disk)
+    GenerateMnemonic,
+
+    /// Derive private key from mnemonic phrase (creates encrypted keystore by default)
+    DeriveKey {
+        /// Path to file containing mnemonic phrase (optional, will prompt if not provided)
+        #[arg(short, long)]
+        mnemonic_file: Option<String>,
+
+        /// Output file path (default: keystore-<ADDRESS>.json for keystore, private-key-<ADDRESS>.txt for plain text)
+        #[arg(short, long)]
+        output: Option<String>,
+
+        /// Save as plain text private key instead of encrypted keystore (NOT RECOMMENDED)
+        #[arg(long)]
+        plain_text: bool,
+    },
+
     /// Generate unsigned transaction JSON for contract deployment
     Prepare {
         /// Path to compiled contract JSON (Solidity compiler output)
@@ -71,24 +89,6 @@ enum Commands {
         /// Path to signed transaction JSON
         #[arg(short, long)]
         signed: String,
-    },
-
-    /// Generate a new 24-word BIP39 mnemonic phrase (display only, nothing saved to disk)
-    GenerateMnemonic,
-
-    /// Derive private key from mnemonic phrase (creates encrypted keystore by default)
-    DeriveKey {
-        /// Path to file containing mnemonic phrase (optional, will prompt if not provided)
-        #[arg(short, long)]
-        mnemonic_file: Option<String>,
-
-        /// Output file path (default: keystore-<ADDRESS>.json for keystore, private-key-<ADDRESS>.txt for plain text)
-        #[arg(short, long)]
-        output: Option<String>,
-
-        /// Save as plain text private key instead of encrypted keystore (NOT RECOMMENDED)
-        #[arg(long)]
-        plain_text: bool,
     },
 }
 
