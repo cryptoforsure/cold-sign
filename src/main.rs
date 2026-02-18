@@ -35,7 +35,7 @@ enum Commands {
         plain_text: bool,
     },
 
-    /// Generate unsigned transaction JSON for contract deployment
+    /// Generate unsigned transaction JSON for contract deployment or function call
     Prepare {
         /// Path to compiled contract JSON (Solidity compiler output)
         #[arg(short, long)]
@@ -53,19 +53,31 @@ enum Commands {
         #[arg(short, long, requires = "network")]
         infura_key: Option<String>,
 
-        /// Deployer address
+        /// Sender address
         #[arg(short, long)]
         from: String,
 
-        /// Constructor arguments (comma-separated)
+        /// Deployed contract address to call (enables call mode, must be used with --function)
+        #[arg(long, requires = "function_name")]
+        to: Option<String>,
+
+        /// Function name to call (enables call mode, must be used with --to)
+        #[arg(long = "function", requires = "to")]
+        function_name: Option<String>,
+
+        /// Constructor or function arguments (comma-separated)
         #[arg(long)]
         args: Option<String>,
+
+        /// ETH value to send in wei (default: 0, for payable constructors or functions)
+        #[arg(long, default_value = "0")]
+        value: String,
 
         /// Output file path for unsigned transaction
         #[arg(short, long, default_value = "unsigned.json")]
         output: String,
 
-        /// Gas limit (optional, will estimate if not provided)
+        /// Gas limit (optional, defaults to 3,000,000 if not provided)
         #[arg(long)]
         gas_limit: Option<u64>,
     },
@@ -104,12 +116,15 @@ async fn main() -> Result<()> {
             network,
             infura_key,
             from,
+            to,
+            function_name,
             args,
+            value,
             output,
             gas_limit,
         } => {
             let resolved_rpc_url = utils::rpc::resolve_rpc_url(rpc_url, network, infura_key)?;
-            commands::prepare::execute(contract, resolved_rpc_url, from, args, output, gas_limit)
+            commands::prepare::execute(contract, resolved_rpc_url, from, to, function_name, args, value, output, gas_limit)
                 .await?;
         }
         Commands::Sign {

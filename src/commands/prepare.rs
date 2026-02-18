@@ -14,7 +14,10 @@ pub async fn execute(
     contract_path: String,
     rpc_url: String,
     from: String,
+    to: Option<String>,
+    function_name: Option<String>,
     args: Option<String>,
+    value: String,
     output: String,
     gas_limit: Option<u64>,
 ) -> Result<()> {
@@ -29,53 +32,124 @@ pub async fn execute(
     let abi: Abi = serde_json::from_value(abi_value)
         .context("Failed to parse ABI")?;
 
-    // Encode constructor arguments if provided
-    let constructor_data = if let Some(args_str) = args {
-        if let Some(constructor) = abi.constructor() {
+    // Determine call mode vs. deploy mode
+    let is_call_mode = to.is_some() && function_name.is_some();
+
+    // Build transaction data
+    let (tx_to, tx_data) = if is_call_mode {
+        // ── Call mode: encode a function call ──────────────────────────────
+        let to_str = to.as_deref().unwrap();
+        let func_name = function_name.as_deref().unwrap();
+
+        println!("Mode: Function call");
+        println!("To: {}", to_str);
+        println!("Function: {}", func_name);
+
+        // Validate the 'to' address
+        let to_addr = H160::from_str(to_str)
+            .with_context(|| format!("Invalid contract address: {}", to_str))?;
+
+        // Look up the function in ABI
+        let function = abi
+            .function(func_name)
+            .with_context(|| format!("Function '{}' not found in ABI", func_name))?;
+
+        // Encode function call data
+        let call_data = if let Some(args_str) = args {
             let args_vec: Vec<&str> = args_str.split(',').map(|s| s.trim()).collect();
 
-            if args_vec.len() != constructor.inputs.len() {
+            if args_vec.len() != function.inputs.len() {
                 anyhow::bail!(
-                    "Constructor expects {} argument(s) but {} were provided",
-                    constructor.inputs.len(),
+                    "Function '{}' expects {} argument(s) but {} were provided",
+                    func_name,
+                    function.inputs.len(),
                     args_vec.len()
                 );
             }
 
             let tokens: Vec<Token> = args_vec
                 .iter()
-                .zip(constructor.inputs.iter())
-                .map(|(arg, param)| {
-                    parse_arg_to_token(arg, &param.kind)
-                })
+                .zip(function.inputs.iter())
+                .map(|(arg, param)| parse_arg_to_token(arg, &param.kind))
                 .collect::<Result<Vec<_>>>()
-                .context("Failed to parse constructor arguments")?;
+                .context("Failed to parse function arguments")?;
 
-            let bytecode_bytes = hex::decode(&bytecode)
-                .context("Failed to decode bytecode hex")?;
-            constructor.encode_input(bytecode_bytes, &tokens)
-                .context("Failed to encode constructor")?
+            function
+                .encode_input(&tokens)
+                .context("Failed to encode function call")?
         } else {
-            anyhow::bail!("Contract has no constructor but arguments were provided");
-        }
-    } else {
-        // Validate that the constructor does not require parameters
-        if let Some(constructor) = abi.constructor() {
-            if !constructor.inputs.is_empty() {
-                let param_list: Vec<String> = constructor
+            if !function.inputs.is_empty() {
+                let param_list: Vec<String> = function
                     .inputs
                     .iter()
                     .map(|p| format!("{}: {}", p.name, p.kind))
                     .collect();
                 anyhow::bail!(
-                    "Constructor requires {} parameter(s) but none were provided: {}\n\
-                     Use --args to supply constructor arguments.",
-                    constructor.inputs.len(),
+                    "Function '{}' requires {} parameter(s) but none were provided: {}\n\
+                     Use --args to supply function arguments.",
+                    func_name,
+                    function.inputs.len(),
                     param_list.join(", ")
                 );
             }
-        }
-        hex::decode(&bytecode).context("Failed to decode bytecode")?
+            function
+                .encode_input(&[])
+                .context("Failed to encode function call")?
+        };
+
+        (Some(format!("{:?}", to_addr)), call_data)
+    } else {
+        // ── Deploy mode: bytecode + encoded constructor args ───────────────
+        println!("Mode: Contract deployment");
+
+        let constructor_data = if let Some(args_str) = args {
+            if let Some(constructor) = abi.constructor() {
+                let args_vec: Vec<&str> = args_str.split(',').map(|s| s.trim()).collect();
+
+                if args_vec.len() != constructor.inputs.len() {
+                    anyhow::bail!(
+                        "Constructor expects {} argument(s) but {} were provided",
+                        constructor.inputs.len(),
+                        args_vec.len()
+                    );
+                }
+
+                let tokens: Vec<Token> = args_vec
+                    .iter()
+                    .zip(constructor.inputs.iter())
+                    .map(|(arg, param)| parse_arg_to_token(arg, &param.kind))
+                    .collect::<Result<Vec<_>>>()
+                    .context("Failed to parse constructor arguments")?;
+
+                let bytecode_bytes = hex::decode(&bytecode)
+                    .context("Failed to decode bytecode hex")?;
+                constructor
+                    .encode_input(bytecode_bytes, &tokens)
+                    .context("Failed to encode constructor")?
+            } else {
+                anyhow::bail!("Contract has no constructor but arguments were provided");
+            }
+        } else {
+            // Validate that the constructor does not require parameters
+            if let Some(constructor) = abi.constructor() {
+                if !constructor.inputs.is_empty() {
+                    let param_list: Vec<String> = constructor
+                        .inputs
+                        .iter()
+                        .map(|p| format!("{}: {}", p.name, p.kind))
+                        .collect();
+                    anyhow::bail!(
+                        "Constructor requires {} parameter(s) but none were provided: {}\n\
+                         Use --args to supply constructor arguments.",
+                        constructor.inputs.len(),
+                        param_list.join(", ")
+                    );
+                }
+            }
+            hex::decode(&bytecode).context("Failed to decode bytecode")?
+        };
+
+        (None, constructor_data)
     };
 
     // Connect to RPC provider
@@ -89,7 +163,8 @@ pub async fn execute(
 
     // Fetch chain ID from RPC
     println!("Fetching chain ID from RPC...");
-    let chain_id = provider.get_chainid()
+    let chain_id = provider
+        .get_chainid()
         .await
         .context("Failed to fetch chain ID from RPC")?
         .as_u64();
@@ -97,50 +172,53 @@ pub async fn execute(
 
     // Fetch nonce
     println!("Fetching nonce for address: {}", from);
-    let nonce = provider.get_transaction_count(from_addr, None)
+    let nonce = provider
+        .get_transaction_count(from_addr, None)
         .await
         .context("Failed to fetch nonce")?;
 
     // Fetch fee data (EIP-1559 or legacy)
     println!("Fetching gas price information...");
-    let fee_data = provider.fee_history(1, ethers::types::BlockNumber::Latest, &[])
+    let fee_data = provider
+        .fee_history(1, ethers::types::BlockNumber::Latest, &[])
         .await;
 
-    let (max_fee_per_gas, max_priority_fee_per_gas, gas_price) = if let Ok(fee_history) = fee_data {
-        // EIP-1559
-        let base_fee = fee_history.base_fee_per_gas.first()
-            .copied()
-            .unwrap_or(U256::from(1_000_000_000u64)); // 1 gwei default
+    let (max_fee_per_gas, max_priority_fee_per_gas, gas_price) =
+        if let Ok(fee_history) = fee_data {
+            // EIP-1559
+            let base_fee = fee_history
+                .base_fee_per_gas
+                .first()
+                .copied()
+                .unwrap_or(U256::from(1_000_000_000u64)); // 1 gwei default
 
-        let priority_fee = U256::from(1_500_000_000u64); // 1.5 gwei
-        let max_fee: U256 = base_fee * 2 + priority_fee;
+            let priority_fee = U256::from(1_500_000_000u64); // 1.5 gwei
+            let max_fee: U256 = base_fee * 2 + priority_fee;
 
-        (Some(max_fee.as_u64()), Some(priority_fee.as_u64()), None)
-    } else {
-        // Legacy gas price
-        let gas_price = provider.get_gas_price()
-            .await
-            .context("Failed to fetch gas price")?;
-        (None, None, Some(gas_price.as_u64()))
-    };
+            (Some(max_fee.as_u64()), Some(priority_fee.as_u64()), None)
+        } else {
+            // Legacy gas price
+            let gas_price = provider
+                .get_gas_price()
+                .await
+                .context("Failed to fetch gas price")?;
+            (None, None, Some(gas_price.as_u64()))
+        };
 
-    // Estimate gas limit if not provided
-    let estimated_gas = gas_limit.unwrap_or_else(|| {
-        // Default gas limit for contract deployment
-        3_000_000u64
-    });
+    // Gas limit
+    let estimated_gas = gas_limit.unwrap_or(3_000_000u64);
 
     // Create unsigned transaction
     let unsigned_tx = UnsignedTransaction {
-        to: None, // Contract deployment has no recipient
-        data: hex::encode(&constructor_data),
+        to: tx_to,
+        data: hex::encode(&tx_data),
         nonce: nonce.as_u64(),
         gas_limit: estimated_gas,
         gas_price,
         max_fee_per_gas,
         max_priority_fee_per_gas,
         chain_id,
-        value: "0".to_string(),
+        value,
         rpc_url: rpc_url.clone(),
     };
 
@@ -149,8 +227,7 @@ pub async fn execute(
     let json = serde_json::to_string_pretty(&unsigned_tx)
         .context("Failed to serialize transaction")?;
 
-    fs::write(&output, json)
-        .context("Failed to write output file")?;
+    fs::write(&output, json).context("Failed to write output file")?;
 
     println!("\n✓ Unsigned transaction prepared successfully!");
     println!("  Nonce: {}", unsigned_tx.nonce);
@@ -158,8 +235,14 @@ pub async fn execute(
     if let Some(gp) = unsigned_tx.gas_price {
         println!("  Gas price: {} gwei", gp / 1_000_000_000);
     } else {
-        println!("  Max fee per gas: {} gwei", unsigned_tx.max_fee_per_gas.unwrap() / 1_000_000_000);
-        println!("  Max priority fee per gas: {} gwei", unsigned_tx.max_priority_fee_per_gas.unwrap() / 1_000_000_000);
+        println!(
+            "  Max fee per gas: {} gwei",
+            unsigned_tx.max_fee_per_gas.unwrap() / 1_000_000_000
+        );
+        println!(
+            "  Max priority fee per gas: {} gwei",
+            unsigned_tx.max_priority_fee_per_gas.unwrap() / 1_000_000_000
+        );
     }
 
     Ok(())
@@ -185,9 +268,7 @@ fn parse_arg_to_token(arg: &str, param_type: &ethers::abi::ParamType) -> Result<
             let value = arg.parse::<bool>()?;
             Ok(Token::Bool(value))
         }
-        ParamType::String => {
-            Ok(Token::String(arg.to_string()))
-        }
+        ParamType::String => Ok(Token::String(arg.to_string())),
         ParamType::Bytes => {
             let bytes = hex::decode(arg.strip_prefix("0x").unwrap_or(arg))?;
             Ok(Token::Bytes(bytes))

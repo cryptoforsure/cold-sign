@@ -4,10 +4,10 @@ Offline signer for deploying Solidity contracts to Ethereum and EVM-compatible c
 
 ## Overview
 
-`cold-deploy` is a secure CLI tool for deploying smart contracts using offline signing. It provides:
+`cold-deploy` is a secure CLI tool for deploying smart contracts and calling contract functions using offline signing. It provides:
 
-**Contract Deployment Workflow:**
-1. **prepare** - Generate unsigned transaction JSON
+**Transaction Workflow (deployment or function call):**
+1. **prepare** - Generate unsigned transaction JSON (deploy a contract or call a function)
 2. **sign** - Sign the transaction offline with a keystore
 3. **broadcast** - Send the signed transaction to the network
 
@@ -22,7 +22,8 @@ Offline signer for deploying Solidity contracts to Ethereum and EVM-compatible c
 - **Encrypted Keystore Support**: Uses standard Ethereum encrypted JSON keystores
 - **EIP-1559 Support**: Automatic detection and support for both legacy and EIP-1559 transactions
 - **Multi-Chain**: Works with Ethereum and all EVM-compatible chains
-- **Contract Deployment**: Specialized for deploying Solidity contracts with constructor arguments
+- **Contract Deployment**: Deploy Solidity contracts with ABI-encoded constructor arguments
+- **Function Calls**: Call any function on an already-deployed contract with ABI-encoded arguments
 - **Transaction Tracking**: Monitor transaction confirmation and retrieve deployed contract addresses
 
 ## Installation
@@ -46,7 +47,7 @@ The typical workflow involves five steps performed on different machines for max
 
 1. **Offline machine**: Generate new mnemonic phrase (generate-mnemonic)
 2. **Offline machine**: Derive private key from mnemonic (derive-key)
-3. **Online machine**: Generate unsigned transaction with network configuration (prepare)
+3. **Online machine**: Generate unsigned transaction with network configuration (prepare) — for contract deployment or a function call
 4. **Offline machine**: Sign transaction with keystore (sign) - preserves network config
 5. **Online machine**: Broadcast signed transaction (broadcast) - uses stored network config
 
@@ -197,7 +198,15 @@ $ cold-deploy derive-key --plain-text --output my-key.txt
 
 ### 3. Prepare Command
 
-Generate an unsigned transaction for contract deployment. The chain ID is automatically detected from the RPC endpoint.
+Generate an unsigned transaction for **contract deployment** or **function calls**. The chain ID is automatically detected from the RPC endpoint.
+
+The mode is selected by the flags provided:
+- **Deploy mode** (default): omit `--to` and `--function`; `data` is the contract bytecode + ABI-encoded constructor arguments
+- **Call mode**: provide both `--to` and `--function`; `data` is the ABI-encoded function call (selector + arguments)
+
+---
+
+#### Deploy Mode
 
 **Using Infura (recommended for public networks):**
 
@@ -220,7 +229,7 @@ cold-deploy prepare \
   --output unsigned.json
 ```
 
-**With Constructor Arguments:**
+**With constructor arguments:**
 
 ```bash
 cold-deploy prepare \
@@ -233,15 +242,67 @@ cold-deploy prepare \
   --output unsigned.json
 ```
 
+---
+
+#### Call Mode
+
+Call an already-deployed contract function by providing `--to` (contract address) and `--function` (function name). Both flags must always be used together.
+
+**Calling a function with arguments:**
+
+```bash
+cold-deploy prepare \
+  --contract examples/SimpleStorage.json \
+  --rpc-url http://localhost:8545 \
+  --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
+  --to 0xDeployedContractAddress \
+  --function store \
+  --args "42" \
+  --output unsigned.json
+```
+
+**Calling a no-argument function:**
+
+```bash
+cold-deploy prepare \
+  --contract examples/SimpleStorage.json \
+  --network sepolia \
+  --infura-key YOUR_INFURA_API_KEY \
+  --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
+  --to 0xDeployedContractAddress \
+  --function reset \
+  --output unsigned.json
+```
+
+**Calling a payable function (sending ETH):**
+
+```bash
+cold-deploy prepare \
+  --contract examples/SimpleStorage.json \
+  --rpc-url http://localhost:8545 \
+  --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
+  --to 0xDeployedContractAddress \
+  --function deposit \
+  --value 1000000000000000000 \
+  --output unsigned.json
+```
+
+> **Note:** The compiled contract JSON must contain the ABI of the target contract. Only the ABI is used in call mode; the `bytecode` field is ignored.
+
+---
+
 **Parameters:**
-- `--contract` / `-c`: Path to compiled Solidity contract JSON (must have `bytecode` and `abi` fields)
+- `--contract` / `-c`: Path to compiled Solidity contract JSON (must have `bytecode` and `abi` fields for deploy; only `abi` is required for call mode)
 - **Network configuration (choose one):**
   - `--network` / `-n` + `--infura-key` / `-i`: Network name and Infura API key (recommended for public networks)
   - `--rpc-url` / `-r`: Custom RPC endpoint URL (for local chains or other providers)
-- `--from` / `-f`: Address that will deploy the contract
-- `--args`: Comma-separated constructor arguments (optional)
+- `--from` / `-f`: Sender address
+- `--to`: Deployed contract address to call *(call mode only, requires `--function`)*
+- `--function`: Function name to call *(call mode only, requires `--to`)*
+- `--args`: Comma-separated constructor or function arguments (optional)
+- `--value`: ETH value to send in wei (optional, default: `0`; for payable constructors or functions)
 - `--gas-limit`: Manual gas limit (optional, defaults to 3,000,000)
-- `--output` / `-o`: Output file path (default: unsigned.json)
+- `--output` / `-o`: Output file path (default: `unsigned.json`)
 
 **Supported Networks (for --network):**
 - **Ethereum:** `mainnet`, `sepolia`, `goerli`, `holesky`
@@ -403,6 +464,15 @@ Just specify the correct `--rpc-url` and the chain ID will be automatically dete
 - Ensure contract JSON has `bytecode` field
 - Verify JSON is from Solidity compiler output
 - Check file isn't corrupted
+
+### "Function 'X' not found in ABI"
+- Verify the function name matches exactly (case-sensitive) the name in the Solidity source
+- Confirm the correct contract JSON file is being passed via `--contract`
+- Check the ABI array in the JSON includes the target function
+
+### "Function 'X' expects N argument(s) but M were provided"
+- Count the comma-separated values in `--args` to ensure they match the function signature
+- Check for extra or missing commas in the argument list
 
 ### "Invalid mnemonic: expected 24 words"
 - Verify you're entering exactly 24 words
