@@ -33,6 +33,15 @@ pub async fn execute(
     let constructor_data = if let Some(args_str) = args {
         if let Some(constructor) = abi.constructor() {
             let args_vec: Vec<&str> = args_str.split(',').map(|s| s.trim()).collect();
+
+            if args_vec.len() != constructor.inputs.len() {
+                anyhow::bail!(
+                    "Constructor expects {} argument(s) but {} were provided",
+                    constructor.inputs.len(),
+                    args_vec.len()
+                );
+            }
+
             let tokens: Vec<Token> = args_vec
                 .iter()
                 .zip(constructor.inputs.iter())
@@ -50,6 +59,22 @@ pub async fn execute(
             anyhow::bail!("Contract has no constructor but arguments were provided");
         }
     } else {
+        // Validate that the constructor does not require parameters
+        if let Some(constructor) = abi.constructor() {
+            if !constructor.inputs.is_empty() {
+                let param_list: Vec<String> = constructor
+                    .inputs
+                    .iter()
+                    .map(|p| format!("{}: {}", p.name, p.kind))
+                    .collect();
+                anyhow::bail!(
+                    "Constructor requires {} parameter(s) but none were provided: {}\n\
+                     Use --args to supply constructor arguments.",
+                    constructor.inputs.len(),
+                    param_list.join(", ")
+                );
+            }
+        }
         hex::decode(&bytecode).context("Failed to decode bytecode")?
     };
 
