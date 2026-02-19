@@ -1,9 +1,9 @@
 [package]
-name = "cold-deploy"
+name = "cold-sign"
 version = "0.1.0"
 edition = "2021"
 authors = ["Ethan"]
-description = "Offline signer for deploying Solidity contracts"
+description = "Offline signer for EVM-compatible transactions"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }

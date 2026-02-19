@@ -51,7 +51,7 @@ pub async fn execute() -> Result<()> {
     println!("  1. Write down the 24 words above on paper");
     println!("  2. Store the paper securely (safe, safety deposit box, etc.)");
     println!("  3. To create a private key file or keystore, use:");
-    println!("     cold-deploy derive-key --output private-key.txt\n");
+    println!("     cold-sign derive-key --output private-key.txt\n");
 
     Ok(())
 }

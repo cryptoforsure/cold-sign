@@ -7,8 +7,8 @@ mod types;
 mod utils;
 
 #[derive(Parser)]
-#[command(name = "cold-deploy")]
-#[command(about = "Offline signer for deploying Solidity contracts", long_about = None)]
+#[command(name = "cold-sign")]
+#[command(about = "Offline signer for EVM-compatible transactions", long_about = None)]
 #[command(version)]
 struct Cli {
     #[command(subcommand)]

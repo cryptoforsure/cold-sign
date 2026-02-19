@@ -1,10 +1,10 @@
-# cold-deploy
+# cold-sign
 
-Offline signer for deploying Solidity contracts to Ethereum and EVM-compatible chains.
+Offline signer for EVM-compatible transactions to Ethereum and EVM-compatible chains.
 
 ## Overview
 
-`cold-deploy` is a secure CLI tool for deploying smart contracts and calling contract functions using offline signing. It provides:
+`cold-sign` is a secure CLI tool for deploying smart contracts and calling contract functions using offline signing. It provides:
 
 **Transaction Workflow (deployment or function call):**
 1. **prepare** - Generate unsigned transaction JSON (deploy a contract or call a function)
@@ -31,13 +31,13 @@ Offline signer for deploying Solidity contracts to Ethereum and EVM-compatible c
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/cold-deploy
-cd cold-deploy
+git clone https://github.com/yourusername/cold-sign
+cd cold-sign
 cargo build --release
 cargo install --path .
 ```
 
-The binary will be available as `cold-deploy` in your PATH.
+The binary will be available as `cold-sign` in your PATH.
 
 ## Usage
 
@@ -61,7 +61,7 @@ The typical workflow involves five steps performed on different machines for max
 Generate a new 24-word BIP39 mnemonic phrase for creating wallets. **This command only displays the mnemonic on screen and never saves anything to disk.**
 
 ```bash
-cold-deploy generate-mnemonic
+cold-sign generate-mnemonic
 ```
 
 **Parameters:**
@@ -110,7 +110,7 @@ Next steps:
   1. Write down the 24 words above on paper
   2. Store the paper securely (safe, safety deposit box, etc.)
   3. To create an encrypted keystore, use:
-     cold-deploy derive-key
+     cold-sign derive-key
 ```
 
 ### 2. Derive-Key Command
@@ -119,16 +119,16 @@ Derive an encrypted keystore from your 24-word mnemonic phrase. **Creates an enc
 
 ```bash
 # Create encrypted keystore (recommended, default behavior)
-cold-deploy derive-key
+cold-sign derive-key
 
 # Create encrypted keystore with custom filename
-cold-deploy derive-key --output my-keystore.json
+cold-sign derive-key --output my-keystore.json
 
 # Read mnemonic from file
-cold-deploy derive-key --mnemonic-file mnemonic.txt
+cold-sign derive-key --mnemonic-file mnemonic.txt
 
 # Plain text private key (NOT RECOMMENDED - requires explicit flag)
-cold-deploy derive-key --plain-text --output private-key.txt
+cold-sign derive-key --plain-text --output private-key.txt
 ```
 
 **Parameters:**
@@ -154,7 +154,7 @@ cold-deploy derive-key --plain-text --output private-key.txt
 
 **Example Usage (Encrypted Keystore):**
 ```bash
-$ cold-deploy derive-key
+$ cold-sign derive-key
 Deriving encrypted keystore from mnemonic...
 
 Enter your 24-word mnemonic phrase:
@@ -185,7 +185,7 @@ Encrypting keystore...
 
 **Example Usage (Plain Text - Not Recommended):**
 ```bash
-$ cold-deploy derive-key --plain-text --output my-key.txt
+$ cold-sign derive-key --plain-text --output my-key.txt
 ⚠️  WARNING: Creating PLAIN TEXT private key file!
 ⚠️  Consider using encrypted keystore instead (default)
 
@@ -211,7 +211,7 @@ The mode is selected by the flags provided:
 **Using Infura (recommended for public networks):**
 
 ```bash
-cold-deploy prepare \
+cold-sign prepare \
   --contract examples/SimpleStorage.json \
   --network sepolia \
   --infura-key YOUR_INFURA_API_KEY \
@@ -222,7 +222,7 @@ cold-deploy prepare \
 **Using custom RPC URL (for local chains or other providers):**
 
 ```bash
-cold-deploy prepare \
+cold-sign prepare \
   --contract examples/SimpleStorage.json \
   --rpc-url http://localhost:8545 \
   --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
@@ -232,7 +232,7 @@ cold-deploy prepare \
 **With constructor arguments:**
 
 ```bash
-cold-deploy prepare \
+cold-sign prepare \
   --contract MyToken.json \
   --network mainnet \
   --infura-key YOUR_INFURA_API_KEY \
@@ -251,7 +251,7 @@ Call an already-deployed contract function by providing `--to` (contract address
 **Calling a function with arguments:**
 
 ```bash
-cold-deploy prepare \
+cold-sign prepare \
   --contract examples/SimpleStorage.json \
   --rpc-url http://localhost:8545 \
   --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
@@ -264,7 +264,7 @@ cold-deploy prepare \
 **Calling a no-argument function:**
 
 ```bash
-cold-deploy prepare \
+cold-sign prepare \
   --contract examples/SimpleStorage.json \
   --network sepolia \
   --infura-key YOUR_INFURA_API_KEY \
@@ -277,7 +277,7 @@ cold-deploy prepare \
 **Calling a payable function (sending ETH):**
 
 ```bash
-cold-deploy prepare \
+cold-sign prepare \
   --contract examples/SimpleStorage.json \
   --rpc-url http://localhost:8545 \
   --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb \
@@ -329,7 +329,7 @@ The tool automatically fetches the chain ID from the RPC endpoint using the `eth
 Sign the transaction offline using an encrypted keystore. **This should be done on an air-gapped machine.**
 
 ```bash
-cold-deploy sign \
+cold-sign sign \
   --unsigned unsigned.json \
   --keystore /path/to/keystore.json \
   --output signed.json
@@ -352,7 +352,7 @@ You will be prompted to enter your keystore password securely (input is hidden).
 Broadcast the signed transaction to the network. The RPC URL and chain ID are automatically read from `signed.json`.
 
 ```bash
-cold-deploy broadcast --signed signed.json
+cold-sign broadcast --signed signed.json
 ```
 
 **Parameters:**
@@ -490,8 +490,8 @@ Just specify the correct `--rpc-url` and the chain ID will be automatically dete
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/cold-deploy
-cd cold-deploy
+git clone https://github.com/yourusername/cold-sign
+cd cold-sign
 
 # Build debug version
 cargo build
