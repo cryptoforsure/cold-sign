@@ -535,6 +535,8 @@ async fn serve_form(State(state): State<AppState>) -> Html<String> {
                     if (result.params.length > 0) {{
                         console.log('Rendering parameter fields');
                         renderParameterFields(result.params);
+                        // Always hide fallback after rendering individual fields
+                        // (values have been transferred to individual fields if they were in fallback)
                         document.getElementById('args-fallback').style.display = 'none';
                     }} else {{
                         console.log('No parameters for this function/constructor');
@@ -564,6 +566,10 @@ async fn serve_form(State(state): State<AppState>) -> Html<String> {
             console.log('Container element:', container);
             container.innerHTML = '';
 
+            // Check if there are prefilled args from command line
+            const fallbackArgs = document.getElementById('args').value;
+            const prefilledValues = fallbackArgs ? fallbackArgs.split(',').map(v => v.trim()) : [];
+
             params.forEach((param, index) => {{
                 console.log(`Creating field for param ${{index}}:`, param.name, param.param_type);
                 const formGroup = document.createElement('div');
@@ -580,6 +586,11 @@ async fn serve_form(State(state): State<AppState>) -> Html<String> {
                 input.className = 'param-input';
                 input.placeholder = getPlaceholder(param.param_type);
                 input.required = true;
+
+                // Pre-fill from command-line args if available
+                if (index < prefilledValues.length) {{
+                    input.value = prefilledValues[index];
+                }}
 
                 formGroup.appendChild(label);
                 formGroup.appendChild(input);
@@ -675,8 +686,13 @@ async fn serve_form(State(state): State<AppState>) -> Html<String> {
         (async function initializePage() {{
             const txMode = document.querySelector('input[name="tx-mode"]:checked').value;
 
-            // Hide fallback initially - it will only show on error
-            document.getElementById('args-fallback').style.display = 'none';
+            // Check if args were provided via command line
+            const hasPrefilledArgs = '{args_val}' !== '';
+
+            // Hide fallback initially unless args were prefilled via command line
+            if (!hasPrefilledArgs) {{
+                document.getElementById('args-fallback').style.display = 'none';
+            }}
 
             if ('{contract_val}') {{
                 if (txMode === 'call') {{
