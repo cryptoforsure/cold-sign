@@ -4,23 +4,43 @@ use ethers::{
     providers::{Http, Middleware, Provider},
     types::{H160, U256},
 };
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::str::FromStr;
 
 use crate::types::prepare_output::UnsignedTransaction;
 use crate::utils::contract;
 
-pub async fn execute(
-    contract_path: String,
-    rpc_url: String,
-    from: String,
-    to: Option<String>,
-    function_name: Option<String>,
-    args: Option<String>,
-    value: String,
-    output: String,
-    gas_limit: Option<u64>,
-) -> Result<()> {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrepareParams {
+    pub contract: String,
+    pub rpc_url: String,
+    pub from: String,
+    pub to: Option<String>,
+    pub function_name: Option<String>,
+    pub args: Option<String>,
+    pub value: String,
+    pub output: String,
+    pub gas_limit: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrepareResult {
+    pub unsigned_tx: UnsignedTransaction,
+    pub success: bool,
+    pub message: String,
+}
+
+pub async fn run(params: PrepareParams) -> Result<PrepareResult> {
+    let contract_path = params.contract;
+    let rpc_url = params.rpc_url;
+    let from = params.from;
+    let to = params.to;
+    let function_name = params.function_name;
+    let args = params.args;
+    let value = params.value;
+    let output = params.output;
+    let gas_limit = params.gas_limit;
     println!("Preparing unsigned transaction...");
     println!("Contract: {}", contract_path);
     println!("From: {}", from);
@@ -245,6 +265,39 @@ pub async fn execute(
         );
     }
 
+    let message = "Unsigned transaction prepared successfully!".to_string();
+
+    Ok(PrepareResult {
+        unsigned_tx,
+        success: true,
+        message,
+    })
+}
+
+pub async fn execute(
+    contract_path: String,
+    rpc_url: String,
+    from: String,
+    to: Option<String>,
+    function_name: Option<String>,
+    args: Option<String>,
+    value: String,
+    output: String,
+    gas_limit: Option<u64>,
+) -> Result<()> {
+    let params = PrepareParams {
+        contract: contract_path,
+        rpc_url,
+        from,
+        to,
+        function_name,
+        args,
+        value,
+        output,
+        gas_limit,
+    };
+
+    run(params).await?;
     Ok(())
 }
 

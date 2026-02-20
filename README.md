@@ -17,6 +17,7 @@ Offline signer for EVM-compatible transactions to Ethereum and EVM-compatible ch
 
 ## Features
 
+- **Interactive Web UI**: Browser-based form with auto-populated parameter fields from contract ABI
 - **Offline Signing**: Sign transactions on an air-gapped machine for maximum security
 - **Mnemonic Management**: Generate BIP39 mnemonics and derive private keys
 - **Encrypted Keystore Support**: Uses standard Ethereum encrypted JSON keystores
@@ -24,6 +25,7 @@ Offline signer for EVM-compatible transactions to Ethereum and EVM-compatible ch
 - **Multi-Chain**: Works with Ethereum and all EVM-compatible chains
 - **Contract Deployment**: Deploy Solidity contracts with ABI-encoded constructor arguments
 - **Function Calls**: Call any function on an already-deployed contract with ABI-encoded arguments
+- **Smart Parameter Detection**: Automatically generates individual form fields for each parameter with type hints
 - **Transaction Tracking**: Monitor transaction confirmation and retrieve deployed contract addresses
 
 ## Installation
@@ -48,6 +50,8 @@ The typical workflow involves five steps performed on different machines for max
 1. **Offline machine**: Generate new mnemonic phrase (generate-mnemonic)
 2. **Offline machine**: Derive private key from mnemonic (derive-key)
 3. **Online machine**: Generate unsigned transaction with network configuration (prepare) — for contract deployment or a function call
+   - Use `--interactive` flag for a user-friendly web interface with auto-populated parameter fields
+   - Or use command-line mode for automation and scripting
 4. **Offline machine**: Sign transaction with keystore (sign) - preserves network config
 5. **Online machine**: Broadcast signed transaction (broadcast) - uses stored network config
 
@@ -204,7 +208,74 @@ The mode is selected by the flags provided:
 - **Deploy mode** (default): omit `--to` and `--function`; `data` is the contract bytecode + ABI-encoded constructor arguments
 - **Call mode**: provide both `--to` and `--function`; `data` is the ABI-encoded function call (selector + arguments)
 
+#### Interactive Mode (Web UI)
+
+For a more user-friendly experience, you can use the interactive web-based UI by adding the `--interactive` flag. This opens a browser-based form that automatically populates based on your contract's ABI.
+
+```bash
+cold-sign prepare --interactive
+```
+
+**Features:**
+- **Auto-opens browser** - Launches a local web server and opens your default browser
+- **Visual form interface** - No need to remember command-line flags
+- **Dynamic parameter fields** - Automatically generates individual input fields for each constructor/function parameter
+- **Smart function dropdown** - Shows only state-modifying functions (excludes view/pure functions)
+- **Type hints** - Each parameter field shows its name and type (e.g., "recipient (address)", "amount (uint256)")
+- **Network configuration** - Choose between direct RPC URL or Infura network presets
+- **Real-time validation** - Immediate feedback on errors
+- **Auto-scroll** - Automatically scrolls to show results after submission
+
+**Interactive Mode Workflow:**
+
+1. Run `cold-sign prepare --interactive`
+2. Browser opens automatically with the form
+3. Fill in the configuration:
+   - **Network**: Choose RPC URL or Infura network
+   - **Contract**: Path to your compiled contract JSON
+   - **Account**: Your sender address
+   - **Mode**: Deploy Contract or Call Function
+4. For **Deploy Contract**:
+   - Individual fields appear for each constructor parameter
+5. For **Call Function**:
+   - Select contract address and function from dropdown
+   - Individual fields appear for each function parameter
+6. Click "Prepare Transaction"
+7. Success message appears with output file location
+8. Close browser and proceed to sign the transaction
+
+**Example:**
+```bash
+# Start interactive mode
+cold-sign prepare --interactive
+
+# Form opens in browser at http://127.0.0.1:PORT
+# Fill in:
+#   - Contract: Counter.json
+#   - Network: Sepolia
+#   - From: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+#   - Mode: Call Function
+#   - Function: increment (selected from dropdown)
+#   - amount (uint256): 5
+# Click "Prepare Transaction"
+# Output: unsigned.json created
+```
+
+You can also pre-fill values using command-line flags:
+
+```bash
+cold-sign prepare --interactive \
+  --contract Counter.json \
+  --network sepolia \
+  --infura-key YOUR_KEY \
+  --from 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+```
+
 ---
+
+#### Command-Line Mode
+
+For automation and scripting, use the traditional command-line interface:
 
 #### Deploy Mode
 
@@ -292,6 +363,7 @@ cold-sign prepare \
 ---
 
 **Parameters:**
+- `--interactive`: Launch interactive web-based UI (optional, recommended for ease of use)
 - `--contract` / `-c`: Path to compiled Solidity contract JSON (must have `bytecode` and `abi` fields for deploy; only `abi` is required for call mode)
 - **Network configuration (choose one):**
   - `--network` / `-n` + `--infura-key` / `-i`: Network name and Infura API key (recommended for public networks)
@@ -299,10 +371,12 @@ cold-sign prepare \
 - `--from` / `-f`: Sender address
 - `--to`: Deployed contract address to call *(call mode only, requires `--function`)*
 - `--function`: Function name to call *(call mode only, requires `--to`)*
-- `--args`: Comma-separated constructor or function arguments (optional)
+- `--args`: Comma-separated constructor or function arguments (optional; in interactive mode, individual fields are shown for each parameter)
 - `--value`: ETH value to send in wei (optional, default: `0`; for payable constructors or functions)
 - `--gas-limit`: Manual gas limit (optional, defaults to 3,000,000)
 - `--output` / `-o`: Output file path (default: `unsigned.json`)
+
+**Note:** When using `--interactive`, you can provide any of the above parameters on the command line to pre-fill the form fields.
 
 **Supported Networks (for --network):**
 - **Ethereum:** `mainnet`, `sepolia`, `goerli`, `holesky`

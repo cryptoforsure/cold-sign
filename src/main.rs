@@ -37,9 +37,13 @@ enum Commands {
 
     /// Generate unsigned transaction JSON for contract deployment or function call
     Prepare {
+        /// Use interactive web UI mode
+        #[arg(long)]
+        interactive: bool,
+
         /// Path to compiled contract JSON (Solidity compiler output)
-        #[arg(short, long)]
-        contract: String,
+        #[arg(short, long, required_unless_present = "interactive")]
+        contract: Option<String>,
 
         /// RPC endpoint URL (use this OR --network with --infura-key)
         #[arg(short, long, conflicts_with_all = ["network", "infura_key"])]
@@ -54,8 +58,8 @@ enum Commands {
         infura_key: Option<String>,
 
         /// Sender address
-        #[arg(short, long)]
-        from: String,
+        #[arg(short, long, required_unless_present = "interactive")]
+        from: Option<String>,
 
         /// Deployed contract address to call (enables call mode, must be used with --function)
         #[arg(long, requires = "function_name")]
@@ -111,6 +115,7 @@ async fn main() -> Result<()> {
 
     match cli.command {
         Commands::Prepare {
+            interactive,
             contract,
             rpc_url,
             network,
@@ -123,9 +128,40 @@ async fn main() -> Result<()> {
             output,
             gas_limit,
         } => {
-            let resolved_rpc_url = utils::rpc::resolve_rpc_url(rpc_url, network, infura_key)?;
-            commands::prepare::execute(contract, resolved_rpc_url, from, to, function_name, args, value, output, gas_limit)
+            if interactive {
+                // Interactive web UI mode
+                commands::prepare_interactive::execute(
+                    contract,
+                    rpc_url,
+                    network,
+                    infura_key,
+                    from,
+                    to,
+                    function_name,
+                    args,
+                    value,
+                    output,
+                    gas_limit,
+                )
                 .await?;
+            } else {
+                // CLI mode - contract and from are required (enforced by clap)
+                let contract = contract.expect("contract is required in CLI mode");
+                let from = from.expect("from is required in CLI mode");
+                let resolved_rpc_url = utils::rpc::resolve_rpc_url(rpc_url, network, infura_key)?;
+                commands::prepare::execute(
+                    contract,
+                    resolved_rpc_url,
+                    from,
+                    to,
+                    function_name,
+                    args,
+                    value,
+                    output,
+                    gas_limit,
+                )
+                .await?;
+            }
         }
         Commands::Sign {
             unsigned,
